@@ -1,55 +1,80 @@
+
 import { db } from '../firebase';
 import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { AnyTransaction, FundAccount, Task, TransactionType, TaskStatus, TaskPriority, Income, Expense, Employee, PayrollEntry, PayrollStatus, Deductions, Vendor, Customer, Product, Invoice, InvoiceStatus, LineItem, LiabilityAccount, TimesheetEntry, TimesheetStatus } from '../types';
 
-const today = new Date();
-const getDate = (daysAgo: number) => new Date(today.getTime() - daysAgo * 24 * 60 * 60 * 1000).toISOString();
-
-let mockFundAccounts: FundAccount[] = [];
-
-let mockLiabilityAccounts: LiabilityAccount[] = [];
-
-let mockTasks: Task[] = [];
-
-let mockEmployees: Employee[] = [
-  { id: 'emp1', name: 'John Doe', position: 'Resort Manager', rate: 300, deductions: { sss: 1125, philhealth: 437.5, pagibig: 100, tax: 2479.17 }, hireDate: getDate(365) },
-  { id: 'emp2', name: 'Jane Smith', position: 'Front Desk Officer', rate: 150, deductions: { sss: 562.5, philhealth: 218.75, pagibig: 100, tax: 0 }, hireDate: getDate(180) },
-  { id: 'emp3', name: 'Peter Jones', position: 'Maintenance Staff', rate: 120, deductions: { sss: 450, philhealth: 175, pagibig: 100, tax: 0 }, hireDate: getDate(90) },
-  { id: 'emp4', name: 'Mary Williams', position: 'Housekeeping Supervisor', rate: 130, deductions: { sss: 495, philhealth: 192.5, pagibig: 100, tax: 0 }, hireDate: getDate(600) },
-];
-
-let mockPayrollEntries: PayrollEntry[] = [];
-
-let mockVendors: Vendor[] = [];
-
-let mockCustomers: Customer[] = [];
-
-let mockProducts: Product[] = [];
-
-let mockInvoices: Invoice[] = [];
-
-let mockTimesheetEntries: TimesheetEntry[] = [
-    { id: 'ts1', employeeId: 'emp1', date: getDate(1), startTime: '09:00', endTime: '17:30', breakDuration: 60, totalHours: 7.5, status: TimesheetStatus.APPROVED, approvedBy: 'admin', approvedAt: getDate(0), createdAt: getDate(1), updatedAt: getDate(0) },
-    { id: 'ts2', employeeId: 'emp2', date: getDate(1), startTime: '08:30', endTime: '17:00', breakDuration: 30, totalHours: 8, status: TimesheetStatus.APPROVED, approvedBy: 'admin', approvedAt: getDate(0), createdAt: getDate(1), updatedAt: getDate(0) },
-    { id: 'ts3', employeeId: 'emp3', date: getDate(1), startTime: '10:00', endTime: '19:00', breakDuration: 60, totalHours: 8, status: TimesheetStatus.PENDING, createdAt: getDate(1), updatedAt: getDate(1) },
-    { id: 'ts4', employeeId: 'emp4', date: getDate(2), startTime: '09:00', endTime: '18:00', breakDuration: 60, totalHours: 8, status: TimesheetStatus.PENDING, createdAt: getDate(2), updatedAt: getDate(2) },
-    { id: 'ts5', employeeId: 'emp1', date: getDate(2), startTime: '09:00', endTime: '19:00', breakDuration: 60, totalHours: 9, notes: 'Stayed late to finish report', status: TimesheetStatus.PENDING, createdAt: getDate(2), updatedAt: getDate(2) },
-    { id: 'ts6', employeeId: 'emp2', date: getDate(3), startTime: '08:00', endTime: '12:00', breakDuration: 0, totalHours: 4, notes: 'Half day', status: TimesheetStatus.REJECTED, approvedBy: 'admin', approvedAt: getDate(2), createdAt: getDate(3), updatedAt: getDate(2) },
-];
-
 const apiRequest = <T,>(data: T, delay = 500): Promise<T> =>
   new Promise(resolve => setTimeout(() => resolve(data), delay));
 
-export const getFundAccounts = () => apiRequest(mockFundAccounts);
-export const getLiabilityAccounts = () => apiRequest(mockLiabilityAccounts);
-export const getTasks = () => apiRequest(mockTasks);
-export const getEmployees = () => apiRequest(mockEmployees);
-export const getPayrollEntries = () => apiRequest(mockPayrollEntries);
-export const getVendors = () => apiRequest(mockVendors);
-export const getCustomers = () => apiRequest(mockCustomers);
-export const getProducts = () => apiRequest(mockProducts);
-export const getInvoices = () => apiRequest(mockInvoices);
-export const getTimesheetEntries = () => apiRequest(mockTimesheetEntries);
+export const getFundAccounts = async (): Promise<FundAccount[]> => {
+    const fundAccountsCol = collection(db, 'fundAccounts');
+    const fundAccountSnapshot = await getDocs(fundAccountsCol);
+    const fundAccountList = fundAccountSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FundAccount));
+    return fundAccountList;
+};
+
+export const getLiabilityAccounts = async (): Promise<LiabilityAccount[]> => {
+    const liabilityAccountsCol = collection(db, 'liabilityAccounts');
+    const liabilityAccountSnapshot = await getDocs(liabilityAccountsCol);
+    const liabilityAccountList = liabilityAccountSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as LiabilityAccount));
+    return liabilityAccountList;
+};
+
+export const getTasks = async (): Promise<Task[]> => {
+    const tasksCol = collection(db, 'tasks');
+    const taskSnapshot = await getDocs(tasksCol);
+    const taskList = taskSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Task));
+    return taskList;
+};
+
+export const getEmployees = async (): Promise<Employee[]> => {
+    const employeesCol = collection(db, 'employees');
+    const employeeSnapshot = await getDocs(employeesCol);
+    const employeeList = employeeSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Employee));
+    return employeeList;
+};
+
+export const getPayrollEntries = async (): Promise<PayrollEntry[]> => {
+    const payrollEntriesCol = collection(db, 'payrollEntries');
+    const payrollEntrySnapshot = await getDocs(payrollEntriesCol);
+    const payrollEntryList = payrollEntrySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PayrollEntry));
+    return payrollEntryList;
+};
+
+export const getVendors = async (): Promise<Vendor[]> => {
+    const vendorsCol = collection(db, 'vendors');
+    const vendorSnapshot = await getDocs(vendorsCol);
+    const vendorList = vendorSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Vendor));
+    return vendorList;
+};
+
+export const getCustomers = async (): Promise<Customer[]> => {
+    const customersCol = collection(db, 'customers');
+    const customerSnapshot = await getDocs(customersCol);
+    const customerList = customerSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Customer));
+    return customerList;
+};
+
+export const getProducts = async (): Promise<Product[]> => {
+    const productsCol = collection(db, 'products');
+    const productSnapshot = await getDocs(productsCol);
+    const productList = productSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
+    return productList;
+};
+
+export const getInvoices = async (): Promise<Invoice[]> => {
+    const invoicesCol = collection(db, 'invoices');
+    const invoiceSnapshot = await getDocs(invoicesCol);
+    const invoiceList = invoiceSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Invoice));
+    return invoiceList;
+};
+
+export const getTimesheetEntries = async (): Promise<TimesheetEntry[]> => {
+    const timesheetEntriesCol = collection(db, 'timesheetEntries');
+    const timesheetEntrySnapshot = await getDocs(timesheetEntriesCol);
+    const timesheetEntryList = timesheetEntrySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as TimesheetEntry));
+    return timesheetEntryList;
+};
 
 export const getTransactions = async (): Promise<AnyTransaction[]> => {
     const transactionsCol = collection(db, 'transactions');
@@ -79,256 +104,106 @@ export const deleteTransaction = async (transactionId: string): Promise<void> =>
 };
 
 
-export const addInvoice = (invoiceData: Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newInvoice: Invoice = {
-        ...invoiceData,
-        id: `inv${new Date().getTime()}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-    };
-    mockInvoices = [newInvoice, ...mockInvoices];
-    return apiRequest(newInvoice);
+export const addInvoice = async (invoiceData: Omit<Invoice, 'id'>): Promise<Invoice> => {
+    const docRef = await addDoc(collection(db, 'invoices'), invoiceData);
+    return { id: docRef.id, ...invoiceData } as Invoice;
 };
 
-export const addTask = (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt' | 'status' | 'createdBy'>) => {
-    const newTask: Task = {
-        ...taskData,
-        id: `task${new Date().getTime()}`,
-        status: TaskStatus.TODO, // New tasks always start in 'To Do'
-        createdBy: 'admin', // Assume admin is creating
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-    };
-    mockTasks = [newTask, ...mockTasks];
-    return apiRequest(newTask);
+export const addTask = async (taskData: Omit<Task, 'id'>): Promise<Task> => {
+    const docRef = await addDoc(collection(db, 'tasks'), taskData);
+    return { id: docRef.id, ...taskData } as Task;
 };
 
-export const updateTask = (taskId: string, updates: Partial<Omit<Task, 'id'>>) => {
-    let updatedTask: Task | undefined;
-    mockTasks = mockTasks.map(task => {
-        if (task.id === taskId) {
-            updatedTask = {
-                ...task,
-                ...updates,
-                updatedAt: new Date().toISOString(),
-            };
-            return updatedTask;
-        }
-        return task;
-    });
-    if (!updatedTask) throw new Error("Task not found");
-    return apiRequest(updatedTask);
+export const updateTask = async (taskId: string, updates: Partial<Omit<Task, 'id'>>): Promise<Task> => {
+    const taskRef = doc(db, 'tasks', taskId);
+    await updateDoc(taskRef, updates);
+    return { id: taskId, ...updates } as Task;
 };
 
-export const deleteTask = (taskId: string) => {
-    const taskToDelete = mockTasks.find(t => t.id === taskId);
-    if (!taskToDelete) throw new Error("Task not found");
-    mockTasks = mockTasks.filter(t => t.id !== taskId);
-    return apiRequest(taskToDelete);
+export const deleteTask = async (taskId: string): Promise<void> => {
+    const taskRef = doc(db, 'tasks', taskId);
+    await deleteDoc(taskRef);
 };
 
-export const addTaskComment = (taskId: string, text: string, userId: string) => {
-    let updatedTask: Task | undefined;
-    mockTasks = mockTasks.map(task => {
-        if (task.id === taskId) {
-            const newComment = {
-                userId,
-                text,
-                createdAt: new Date().toISOString(),
-            };
-            const comments = task.comments ? [...task.comments, newComment] : [newComment];
-            updatedTask = {
-                ...task,
-                comments,
-                updatedAt: new Date().toISOString(),
-            };
-            return updatedTask;
-        }
-        return task;
-    });
-    if (!updatedTask) throw new Error("Task not found");
-    return apiRequest(updatedTask);
+export const addFundAccount = async (accountData: Omit<FundAccount, 'id'>): Promise<FundAccount> => {
+    const docRef = await addDoc(collection(db, 'fundAccounts'), accountData);
+    return { id: docRef.id, ...accountData } as FundAccount;
 };
 
-export const addTaskAttachment = (taskId: string, attachmentUrl: string) => {
-    let updatedTask: Task | undefined;
-    mockTasks = mockTasks.map(task => {
-        if (task.id === taskId) {
-            const newAttachments = task.attachments ? [...task.attachments, attachmentUrl] : [attachmentUrl];
-            updatedTask = {
-                ...task,
-                attachments: newAttachments,
-                updatedAt: new Date().toISOString(),
-            };
-            return updatedTask;
-        }
-        return task;
-    });
-    if (!updatedTask) throw new Error("Task not found");
-    return apiRequest(updatedTask);
+export const addLiabilityAccount = async (accountData: Omit<LiabilityAccount, 'id'>): Promise<LiabilityAccount> => {
+    const docRef = await addDoc(collection(db, 'liabilityAccounts'), accountData);
+    return { id: docRef.id, ...accountData } as LiabilityAccount;
 };
 
-export const addFundAccount = (accountData: Omit<FundAccount, 'id' | 'lastUpdated' | 'isHidden'>) => {
-    const newAccount: FundAccount = {
-        ...accountData,
-        id: new Date().getTime().toString(),
-        lastUpdated: new Date().toISOString(),
-        isHidden: false,
-    };
-    mockFundAccounts = [newAccount, ...mockFundAccounts];
-    return apiRequest(newAccount);
-};
-
-export const addLiabilityAccount = (accountData: Omit<LiabilityAccount, 'id' | 'lastUpdated'>) => {
-    const newAccount: LiabilityAccount = {
-        ...accountData,
-        id: `lia-${new Date().getTime().toString()}`,
-        lastUpdated: new Date().toISOString(),
-    };
-    mockLiabilityAccounts = [newAccount, ...mockLiabilityAccounts];
-    return apiRequest(newAccount);
-};
-
-export const updateFundAccount = (accountId: string, updates: Partial<FundAccount>) => {
-    let updatedAccount: FundAccount | undefined;
-    mockFundAccounts = mockFundAccounts.map(acc => {
-        if (acc.id === accountId) {
-            updatedAccount = { ...acc, ...updates, lastUpdated: new Date().toISOString() };
-            return updatedAccount;
-        }
-        return acc;
-    });
-    if (!updatedAccount) throw new Error("Account not found");
-    return apiRequest(updatedAccount);
+export const updateFundAccount = async (accountId: string, updates: Partial<FundAccount>): Promise<FundAccount> => {
+    const accountRef = doc(db, 'fundAccounts', accountId);
+    await updateDoc(accountRef, updates);
+    return { id: accountId, ...updates } as FundAccount;
 }
 
-export const deleteFundAccount = (accountId: string) => {
-    const accountToDelete = mockFundAccounts.find(acc => acc.id === accountId);
-    if (!accountToDelete) throw new Error("Account not found");
-    mockFundAccounts = mockFundAccounts.filter(acc => acc.id !== accountId);
-    return apiRequest(accountToDelete);
+export const deleteFundAccount = async (accountId: string): Promise<void> => {
+    const accountRef = doc(db, 'fundAccounts', accountId);
+    await deleteDoc(accountRef);
 }
 
-export const addVendor = (vendorData: Omit<Vendor, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const newVendor: Vendor = {
-        ...vendorData,
-        id: `v${new Date().getTime()}`,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-    };
-    mockVendors = [newVendor, ...mockVendors];
-    return apiRequest(newVendor);
+export const addVendor = async (vendorData: Omit<Vendor, 'id'>): Promise<Vendor> => {
+    const docRef = await addDoc(collection(db, 'vendors'), vendorData);
+    return { id: docRef.id, ...vendorData } as Vendor;
 };
 
-export const updateVendor = (vendorId: string, updates: Partial<Omit<Vendor, 'id'>>) => {
-    let updatedVendor: Vendor | undefined;
-    mockVendors = mockVendors.map(v => {
-        if (v.id === vendorId) {
-            updatedVendor = {
-                ...v,
-                ...updates,
-                updatedAt: new Date().toISOString(),
-            };
-            return updatedVendor;
-        }
-        return v;
-    });
-    if (!updatedVendor) throw new Error("Vendor not found");
-    return apiRequest(updatedVendor);
+export const updateVendor = async (vendorId: string, updates: Partial<Omit<Vendor, 'id'>>): Promise<Vendor> => {
+    const vendorRef = doc(db, 'vendors', vendorId);
+    await updateDoc(vendorRef, updates);
+    return { id: vendorId, ...updates } as Vendor;
 };
 
-export const deleteVendor = (vendorId: string) => {
-    const vendorToDelete = mockVendors.find(v => v.id === vendorId);
-    if (!vendorToDelete) throw new Error("Vendor not found");
-    mockVendors = mockVendors.filter(v => v.id !== vendorId);
-    return apiRequest(vendorToDelete);
+export const deleteVendor = async (vendorId: string): Promise<void> => {
+    const vendorRef = doc(db, 'vendors', vendorId);
+    await deleteDoc(vendorRef);
 };
 
-export const addPayrollRun = (entries: Omit<PayrollEntry, 'id' | 'status'>[]) => {
-    const newEntries: PayrollEntry[] = entries.map((entry, index) => ({
-        ...entry,
-        id: `pr${new Date().getTime()}${index}`,
-        status: PayrollStatus.DRAFT,
-    }));
-    mockPayrollEntries = [...newEntries, ...mockPayrollEntries];
-    return apiRequest(newEntries);
+export const addPayrollRun = async (entries: Omit<PayrollEntry, 'id'>[]): Promise<PayrollEntry[]> => {
+    const addedEntries: PayrollEntry[] = [];
+    for (const entry of entries) {
+        const docRef = await addDoc(collection(db, 'payrollEntries'), entry);
+        addedEntries.push({ id: docRef.id, ...entry } as PayrollEntry);
+    }
+    return addedEntries;
 };
 
-export const addEmployee = (employeeData: Omit<Employee, 'id'>) => {
-    const newEmployee: Employee = {
-        ...employeeData,
-        id: `emp${new Date().getTime()}`,
-        deductions: employeeData.deductions || { sss: 0, philhealth: 0, pagibig: 0, tax: 0 },
-    };
-    mockEmployees = [newEmployee, ...mockEmployees];
-    return apiRequest(newEmployee);
+export const addEmployee = async (employeeData: Omit<Employee, 'id'>): Promise<Employee> => {
+    const docRef = await addDoc(collection(db, 'employees'), employeeData);
+    return { id: docRef.id, ...employeeData } as Employee;
 };
 
-export const updateEmployee = (employeeId: string, updates: Partial<Omit<Employee, 'id'>>) => {
-    let updatedEmployee: Employee | undefined;
-    mockEmployees = mockEmployees.map(emp => {
-        if (emp.id === employeeId) {
-            updatedEmployee = {
-                ...emp,
-                ...updates,
-                deductions: { ...emp.deductions, ...updates.deductions },
-            };
-            return updatedEmployee;
-        }
-        return emp;
-    });
-    if (!updatedEmployee) throw new Error("Employee not found");
-    return apiRequest(updatedEmployee);
+export const updateEmployee = async (employeeId: string, updates: Partial<Omit<Employee, 'id'>>): Promise<Employee> => {
+    const employeeRef = doc(db, 'employees', employeeId);
+    await updateDoc(employeeRef, updates);
+    return { id: employeeId, ...updates } as Employee;
 };
 
-export const deleteEmployee = (employeeId: string) => {
-    const employeeToDelete = mockEmployees.find(emp => emp.id === employeeId);
-    if (!employeeToDelete) throw new Error("Employee not found");
-    mockEmployees = mockEmployees.filter(emp => emp.id !== employeeId);
-    return apiRequest(employeeToDelete);
+export const deleteEmployee = async (employeeId: string): Promise<void> => {
+    const employeeRef = doc(db, 'employees', employeeId);
+    await deleteDoc(employeeRef);
 };
 
-export const addCustomer = (customerData: Omit<Customer, 'id'>) => {
-    const newCustomer: Customer = {
-        ...customerData,
-        id: `cust${new Date().getTime()}`,
-    };
-    mockCustomers = [newCustomer, ...mockCustomers];
-    return apiRequest(newCustomer);
+export const addCustomer = async (customerData: Omit<Customer, 'id'>): Promise<Customer> => {
+    const docRef = await addDoc(collection(db, 'customers'), customerData);
+    return { id: docRef.id, ...customerData } as Customer;
 };
 
-export const addTimesheetEntry = (entryData: Omit<TimesheetEntry, 'id' | 'createdAt' | 'updatedAt' | 'status'>) => {
-    const newEntry: TimesheetEntry = {
-        ...entryData,
-        id: `ts${new Date().getTime()}`,
-        status: TimesheetStatus.PENDING,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-    };
-    mockTimesheetEntries = [newEntry, ...mockTimesheetEntries];
-    return apiRequest(newEntry);
+export const addTimesheetEntry = async (entryData: Omit<TimesheetEntry, 'id'>): Promise<TimesheetEntry> => {
+    const docRef = await addDoc(collection(db, 'timesheetEntries'), entryData);
+    return { id: docRef.id, ...entryData } as TimesheetEntry;
 };
 
-export const updateTimesheetEntry = (entryId: string, updates: Partial<Omit<TimesheetEntry, 'id'>>) => {
-    let updatedEntry: TimesheetEntry | undefined;
-    mockTimesheetEntries = mockTimesheetEntries.map(entry => {
-        if (entry.id === entryId) {
-            updatedEntry = {
-                ...entry,
-                ...updates,
-                updatedAt: new Date().toISOString(),
-            };
-            return updatedEntry;
-        }
-        return entry;
-    });
-    if (!updatedEntry) throw new Error("Timesheet entry not found");
-    return apiRequest(updatedEntry);
+export const updateTimesheetEntry = async (entryId: string, updates: Partial<Omit<TimesheetEntry, 'id'>>): Promise<TimesheetEntry> => {
+    const entryRef = doc(db, 'timesheetEntries', entryId);
+    await updateDoc(entryRef, updates);
+    return { id: entryId, ...updates } as TimesheetEntry;
 };
 
-export const deleteTimesheetEntry = (entryId: string) => {
-    const entryToDelete = mockTimesheetEntries.find(e => e.id === entryId);
-    if (!entryToDelete) throw new Error("Timesheet entry not found");
-    mockTimesheetEntries = mockTimesheetEntries.filter(e => e.id !== entryId);
-    return apiRequest(entryToDelete);
+export const deleteTimesheetEntry = async (entryId: string): Promise<void> => {
+    const entryRef = doc(db, 'timesheetEntries', entryId);
+    await deleteDoc(entryRef);
 };

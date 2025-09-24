@@ -1,8 +1,11 @@
 
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { onAuthStateChanged, User } from 'firebase/auth';
+import { auth } from './firebase';
+
 import MainLayout from './components/layout/MainLayout';
+import LoginPage from './pages/LoginPage';
 import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import DataManagement from './pages/DataManagement';
@@ -18,24 +21,47 @@ import Reports from './pages/Reports';
 import Timesheets from './pages/Timesheets';
 
 function App() {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
+    });
+
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
+  }, []);
+
+  if (loading) {
+    return <div>Loading...</div>; // Or a spinner component
+  }
+
   return (
     <HashRouter>
       <Routes>
-        <Route element={<MainLayout />}>
-          <Route path="/" element={<Navigate to="/home" replace />} />
-          <Route path="/home" element={<Home />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/data" element={<DataManagement />} />
-          <Route path="/transactions" element={<Transactions />} />
-          <Route path="/funds" element={<Funds />} />
-          <Route path="/timesheets" element={<Timesheets />} />
-          <Route path="/payroll" element={<Payroll />} />
-          <Route path="/invoices" element={<Invoices />} />
-          <Route path="/employees" element={<Employees />} />
-          <Route path="/tasks" element={<Tasks />} />
-          <Route path="/vendors" element={<Vendors />} />
-          <Route path="/reports" element={<Reports />} />
-        </Route>
+        {user ? (
+          <Route element={<MainLayout />}>
+            <Route path="/" element={<Navigate to="/home" replace />} />
+            <Route path="/home" element={<Home />} />
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/data" element={<DataManagement />} />
+            <Route path="/transactions" element={<Transactions />} />
+            <Route path="/funds" element={<Funds />} />
+            <Route path="/timesheets" element={<Timesheets />} />
+            <Route path="/payroll" element={<Payroll />} />
+            <Route path="/invoices" element={<Invoices />} />
+            <Route path="/employees" element={<Employees />} />
+            <Route path="/tasks" element={<Tasks />} />
+            <Route path="/vendors" element={<Vendors />} />
+            <Route path="/reports" element={<Reports />} />
+             {/* Redirect any other path to home when logged in */}
+            <Route path="*" element={<Navigate to="/home" replace />} />
+          </Route>
+        ) : (
+          <Route path="*" element={<LoginPage />} />
+        )}
       </Routes>
     </HashRouter>
   );
