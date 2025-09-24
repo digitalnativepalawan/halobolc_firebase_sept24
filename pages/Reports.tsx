@@ -172,12 +172,16 @@ const Reports: React.FC = () => {
                 return acc;
             }, {} as Record <string, number> );
 
-        const totalIncome = Object.values(incomeByCategory).reduce((sum, amount) => sum + amount, 0);
-        const totalExpenses = Object.values(expenseByCategory).reduce((sum, amount) => sum + amount, 0);
+        // Fix: Add types to reduce function arguments to resolve TS errors.
+        const totalIncome = Object.values(incomeByCategory).reduce((sum: number, amount: number) => sum + amount, 0);
+        // Fix: Add types to reduce function arguments to resolve TS errors.
+        const totalExpenses = Object.values(expenseByCategory).reduce((sum: number, amount: number) => sum + amount, 0);
 
         return {
-            incomeItems: Object.entries(incomeByCategory).sort(([, a], [, b]) => b - a),
-            expenseItems: Object.entries(expenseByCategory).sort(([, a], [, b]) => b - a),
+            // Fix: Cast array values to 'number' to resolve TS errors in sort comparison.
+            incomeItems: Object.entries(incomeByCategory).sort(([, a], [, b]) => (b as number) - (a as number)),
+            // Fix: Cast array values to 'number' to resolve TS errors in sort comparison.
+            expenseItems: Object.entries(expenseByCategory).sort(([, a], [, b]) => (b as number) - (a as number)),
             totalIncome,
             totalExpenses,
             netProfit: totalIncome - totalExpenses,

@@ -228,7 +228,8 @@ const Vendors: React.FC = () => {
     const kpiData = useMemo(() => {
         const totalVendors = vendors.length;
         const categories = new Set(vendors.map(v => v.category));
-        const totalPaid = Object.values(paymentTotals).reduce((sum, amount) => sum + amount, 0);
+        // Fix: Explicitly typed the arguments of the reduce function to resolve a TypeScript error where the `+` operator was being applied to types inferred as 'unknown'.
+        const totalPaid = Object.values(paymentTotals).reduce((sum: number, amount: number) => sum + amount, 0);
         return { totalVendors, totalCategories: categories.size, totalPaid };
     }, [vendors, paymentTotals]);
 
