@@ -20,6 +20,7 @@ const expenseData = [
   { name: 'Other', value: 50 },
 ];
 const quickActions = [
+    { title: 'Upload Data', to: '/data', icon: DataIcon, color: 'text-orange-400' },
     { title: 'Add Transaction', to: '/transactions', icon: TransactionsIcon, color: 'text-green-400' },
     { title: 'Create Task', to: '/tasks', icon: TasksIcon, color: 'text-yellow-400' },
     { title: 'Manage Funds', to: '/funds', icon: FundsIcon, color: 'text-purple-400' },
@@ -27,7 +28,6 @@ const quickActions = [
     { title: 'Manage Employees', to: '/employees', icon: EmployeesIcon, color: 'text-pink-400' },
     { title: 'Manage Vendors', to: '/vendors', icon: VendorsIcon, color: 'text-indigo-400' },
     { title: 'Run Payroll', to: '/payroll', icon: PayrollIcon, color: 'text-teal-400' },
-    { title: 'Upload Data', to: '/data', icon: DataIcon, color: 'text-orange-400' }
 ];
 
 const assigneeMap: { [key: string]: string } = {
