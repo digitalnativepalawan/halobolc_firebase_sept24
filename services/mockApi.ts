@@ -1,5 +1,5 @@
-
-
+import { db } from '../firebase';
+import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { AnyTransaction, FundAccount, Task, TransactionType, TaskStatus, TaskPriority, Income, Expense, Employee, PayrollEntry, PayrollStatus, Deductions, Vendor, Customer, Product, Invoice, InvoiceStatus, LineItem, LiabilityAccount, TimesheetEntry, TimesheetStatus } from '../types';
 
 const today = new Date();
@@ -8,8 +8,6 @@ const getDate = (daysAgo: number) => new Date(today.getTime() - daysAgo * 24 * 6
 let mockFundAccounts: FundAccount[] = [];
 
 let mockLiabilityAccounts: LiabilityAccount[] = [];
-
-let mockTransactions: AnyTransaction[] = [];
 
 let mockTasks: Task[] = [];
 
@@ -39,12 +37,11 @@ let mockTimesheetEntries: TimesheetEntry[] = [
     { id: 'ts6', employeeId: 'emp2', date: getDate(3), startTime: '08:00', endTime: '12:00', breakDuration: 0, totalHours: 4, notes: 'Half day', status: TimesheetStatus.REJECTED, approvedBy: 'admin', approvedAt: getDate(2), createdAt: getDate(3), updatedAt: getDate(2) },
 ];
 
-const apiRequest = <T,>(data: T, delay = 500): Promise<T> => 
+const apiRequest = <T,>(data: T, delay = 500): Promise<T> =>
   new Promise(resolve => setTimeout(() => resolve(data), delay));
 
 export const getFundAccounts = () => apiRequest(mockFundAccounts);
 export const getLiabilityAccounts = () => apiRequest(mockLiabilityAccounts);
-export const getTransactions = () => apiRequest(mockTransactions);
 export const getTasks = () => apiRequest(mockTasks);
 export const getEmployees = () => apiRequest(mockEmployees);
 export const getPayrollEntries = () => apiRequest(mockPayrollEntries);
@@ -53,6 +50,34 @@ export const getCustomers = () => apiRequest(mockCustomers);
 export const getProducts = () => apiRequest(mockProducts);
 export const getInvoices = () => apiRequest(mockInvoices);
 export const getTimesheetEntries = () => apiRequest(mockTimesheetEntries);
+
+export const getTransactions = async (): Promise<AnyTransaction[]> => {
+    const transactionsCol = collection(db, 'transactions');
+    const transactionSnapshot = await getDocs(transactionsCol);
+    const transactionList = transactionSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as AnyTransaction));
+    return transactionList;
+};
+
+export const addTransactions = async (transactions: Omit<AnyTransaction, 'id'>[]): Promise<AnyTransaction[]> => {
+    const addedTransactions: AnyTransaction[] = [];
+    for (const transaction of transactions) {
+        const docRef = await addDoc(collection(db, 'transactions'), transaction);
+        addedTransactions.push({ id: docRef.id, ...transaction } as AnyTransaction);
+    }
+    return addedTransactions;
+};
+
+export const updateTransaction = async (transactionId: string, updates: Partial<Omit<AnyTransaction, 'id'>>): Promise<AnyTransaction> => {
+    const transactionRef = doc(db, 'transactions', transactionId);
+    await updateDoc(transactionRef, updates);
+    return { id: transactionId, ...updates } as AnyTransaction;
+};
+
+export const deleteTransaction = async (transactionId: string): Promise<void> => {
+    const transactionRef = doc(db, 'transactions', transactionId);
+    await deleteDoc(transactionRef);
+};
+
 
 export const addInvoice = (invoiceData: Omit<Invoice, 'id' | 'createdAt' | 'updatedAt'>) => {
     const newInvoice: Invoice = {
@@ -199,8 +224,8 @@ export const updateVendor = (vendorId: string, updates: Partial<Omit<Vendor, 'id
     let updatedVendor: Vendor | undefined;
     mockVendors = mockVendors.map(v => {
         if (v.id === vendorId) {
-            updatedVendor = { 
-                ...v, 
+            updatedVendor = {
+                ...v,
                 ...updates,
                 updatedAt: new Date().toISOString(),
             };
@@ -243,8 +268,8 @@ export const updateEmployee = (employeeId: string, updates: Partial<Omit<Employe
     let updatedEmployee: Employee | undefined;
     mockEmployees = mockEmployees.map(emp => {
         if (emp.id === employeeId) {
-            updatedEmployee = { 
-                ...emp, 
+            updatedEmployee = {
+                ...emp,
                 ...updates,
                 deductions: { ...emp.deductions, ...updates.deductions },
             };
@@ -261,19 +286,6 @@ export const deleteEmployee = (employeeId: string) => {
     if (!employeeToDelete) throw new Error("Employee not found");
     mockEmployees = mockEmployees.filter(emp => emp.id !== employeeId);
     return apiRequest(employeeToDelete);
-};
-
-export const addTransactions = (transactions: Omit<AnyTransaction, 'id'>[]) => {
-    // Fix: Cast the mapped object to AnyTransaction to resolve a TypeScript inference issue.
-    // When spreading a discriminated union, TypeScript can fail to preserve the specific type
-    // (Income or Expense), leading to a type error. The cast assures the compiler that
-    // the object structure is correct.
-    const newTransactions: AnyTransaction[] = transactions.map((t, index) => ({
-        ...t,
-        id: `csv-${new Date().getTime()}-${index}`,
-    }) as AnyTransaction);
-    mockTransactions = [...newTransactions, ...mockTransactions];
-    return apiRequest(newTransactions);
 };
 
 export const addCustomer = (customerData: Omit<Customer, 'id'>) => {

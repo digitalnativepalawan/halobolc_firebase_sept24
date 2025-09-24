@@ -3,10 +3,11 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { getTransactions, addTransactions } from '../services/mockApi';
+import { getTransactions, addTransactions, updateTransaction, deleteTransaction } from '../services/mockApi';
 import { AnyTransaction, TransactionType, Income, Expense } from '../types';
 import { formatCurrencyPHP, formatDate, downloadCSV } from '../utils/formatters';
-import { DocumentArrowDownIcon } from '../components/Icons';
+import { DocumentArrowDownIcon, PencilIcon, TrashIcon } from '../components/Icons';
+import EditTransactionModal from '../components/ui/EditTransactionModal';
 
 const DataManagement: React.FC = () => {
     const [transactions, setTransactions] = useState<AnyTransaction[]>([]);
@@ -14,6 +15,8 @@ const DataManagement: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [isDragOver, setIsDragOver] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [editingTransaction, setEditingTransaction] = useState<AnyTransaction | null>(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     // Advanced filter state
     const [dateRange, setDateRange] = useState({ start: '', end: '' });
@@ -95,6 +98,35 @@ const DataManagement: React.FC = () => {
             t.notes || '',
         ]);
         downloadCSV(headers, data, 'data-management-export.csv');
+    };
+
+    const handleDelete = async (transactionId: string) => {
+        if (window.confirm('Are you sure you want to delete this transaction?')) {
+            try {
+                await deleteTransaction(transactionId);
+                setTransactions(transactions.filter(t => t.id !== transactionId));
+            } catch (error) {
+                alert('Error deleting transaction');
+            }
+        }
+    };
+
+    const handleEdit = (transaction: AnyTransaction) => {
+        setEditingTransaction(transaction);
+        setIsEditModalOpen(true);
+    };
+
+    const handleSave = async (updates: Partial<AnyTransaction>) => {
+        if (!editingTransaction) return;
+
+        try {
+            const updatedTransaction = await updateTransaction(editingTransaction.id, updates);
+            setTransactions(transactions.map(t => t.id === editingTransaction.id ? updatedTransaction : t));
+            setIsEditModalOpen(false);
+            setEditingTransaction(null);
+        } catch (error) {
+            alert('Error updating transaction');
+        }
     };
 
     const handleDownloadTemplate = () => {
@@ -325,12 +357,13 @@ const DataManagement: React.FC = () => {
                                 <th scope="col" className="px-6 py-3">Account</th>
                                 <th scope="col" className="px-6 py-3 text-right">Amount</th>
                                 <th scope="col" className="px-6 py-3">Notes</th>
+                                <th scope="col" className="px-6 py-3">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filteredTransactions.map(t => (
                                 <tr key={t.id} className="border-b border-[#2D2D3A] hover:bg-[#0D0D12]">
-                                    <td className="px-6 py-4 whitespace-nowrap">{formatDate(t.date)}</td>
+                                    <td className="px-6 py-4 whitespace-nownowrap">{formatDate(t.date)}</td>
                                     <td className="px-6 py-4">
                                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${t.type === TransactionType.INCOME ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
                                             {t.type}
@@ -340,6 +373,16 @@ const DataManagement: React.FC = () => {
                                     <td className="px-6 py-4">{t.method}</td>
                                     <td className="px-6 py-4 text-right font-medium text-white">{formatCurrencyPHP(t.amount)}</td>
                                     <td className="px-6 py-4">{t.notes || '—'}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="flex items-center space-x-2">
+                                            <Button variant="ghost" size="sm" onClick={() => handleEdit(t)}>
+                                                <PencilIcon className="h-4 w-4" />
+                                            </Button>
+                                            <Button variant="ghost" size="sm" onClick={() => handleDelete(t.id)}>
+                                                <TrashIcon className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
@@ -349,6 +392,12 @@ const DataManagement: React.FC = () => {
                  {!isLoading && filteredTransactions.length === 0 && <div className="text-center p-4">No transactions found.</div>}
             </Card>
 
+            <EditTransactionModal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                onSave={handleSave}
+                transaction={editingTransaction}
+            />
         </div>
     );
 };
