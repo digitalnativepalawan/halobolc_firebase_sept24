@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 import { AuthProvider, useAuth } from './components/AuthProvider';
 import Login from './components/Login';
@@ -39,6 +37,7 @@ function ProtectedRoutes() {
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/vendors" element={<Vendors />} />
         <Route path="/reports" element={<Reports />} />
+        <Route path="*" element={<Navigate to="/home" replace />} />
       </Route>
     </Routes>
   );
@@ -53,5 +52,4 @@ function App() {
     </AuthProvider>
   );
 }
-
 export default App;

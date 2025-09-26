@@ -1,7 +1,5 @@
 {
   "projects": {
-    "backendoffice": "haloblocsept2025"
-  },
-  "targets": {},
-  "etags": {}
+    "default": "haloblocsept2025"
+  }
 }

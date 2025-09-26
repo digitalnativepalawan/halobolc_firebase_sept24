@@ -169,12 +169,25 @@ const Reports: React.FC = () => {
                 return acc;
             }, {} as Record <string, number> );
 
+<<<<<<< HEAD
     const totalIncome = Object.values(incomeByCategory).reduce((sum: number, amount) => sum + Number(amount), 0);
     const totalExpenses = Object.values(expenseByCategory).reduce((sum: number, amount) => sum + Number(amount), 0);
 
         return {
             incomeItems: Object.entries(incomeByCategory).sort(([, a], [, b]) => Number(b) - Number(a)),
             expenseItems: Object.entries(expenseByCategory).sort(([, a], [, b]) => Number(b) - Number(a)),
+=======
+        // Fix: Add types to reduce function arguments to resolve TS errors.
+        const totalIncome = Object.values(incomeByCategory).reduce((sum: number, amount: number) => sum + amount, 0);
+        // Fix: Add types to reduce function arguments to resolve TS errors.
+        const totalExpenses = Object.values(expenseByCategory).reduce((sum: number, amount: number) => sum + amount, 0);
+
+        return {
+            // Fix: Cast array values to 'number' to resolve TS errors in sort comparison.
+            incomeItems: Object.entries(incomeByCategory).sort(([, a], [, b]) => (b as number) - (a as number)),
+            // Fix: Cast array values to 'number' to resolve TS errors in sort comparison.
+            expenseItems: Object.entries(expenseByCategory).sort(([, a], [, b]) => (b as number) - (a as number)),
+>>>>>>> 0aacf81d071c0e11c0abbe97a7fe9cb1143d494b
             totalIncome,
             totalExpenses,
             netProfit: Number(totalIncome) - Number(totalExpenses),

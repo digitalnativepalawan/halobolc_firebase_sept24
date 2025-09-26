@@ -3,25 +3,22 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import {
-    listenTransactions,
-    addTransaction,
-    updateTransaction,
-    deleteTransaction,
-    resetTransactions
-} from '../services/firestoreTransactions';
+import { getTransactions, addTransactions, updateTransaction, deleteTransaction } from '../services/mockApi';
 import { AnyTransaction, TransactionType, Income, Expense } from '../types';
 import { formatCurrencyPHP, formatDate, downloadCSV } from '../utils/formatters';
-import { DocumentArrowDownIcon } from '../components/Icons';
+import { DocumentArrowDownIcon, PencilIcon, TrashIcon } from '../components/Icons';
+import EditTransactionModal from '../components/ui/EditTransactionModal';
 
 const DataManagement: React.FC = () => {
     const [transactions, setTransactions] = useState<AnyTransaction[]>([]);
-    const [editingTransaction, setEditingTransaction] = useState<AnyTransaction | null>(null);
+    // Only declare editingTransaction and setEditingTransaction once
     const [editFormData, setEditFormData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [isDragOver, setIsDragOver] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [editingTransaction, setEditingTransaction] = useState<AnyTransaction | null>(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
     // Advanced filter state
     const [dateRange, setDateRange] = useState({ start: '', end: '' });
@@ -31,11 +28,10 @@ const DataManagement: React.FC = () => {
 
     useEffect(() => {
         setIsLoading(true);
-        const unsubscribe = listenTransactions((data) => {
+        getTransactions().then(data => {
             setTransactions(data);
             setIsLoading(false);
         });
-        return () => unsubscribe();
     }, []);
 
     // Delete transaction handler
@@ -133,12 +129,41 @@ const DataManagement: React.FC = () => {
         downloadCSV(headers, data, 'data-management-export.csv');
     };
 
+    const handleDelete = async (transactionId: string) => {
+        if (window.confirm('Are you sure you want to delete this transaction?')) {
+            try {
+                await deleteTransaction(transactionId);
+                setTransactions(transactions.filter(t => t.id !== transactionId));
+            } catch (error) {
+                alert('Error deleting transaction');
+            }
+        }
+    };
+
+    const handleEdit = (transaction: AnyTransaction) => {
+        setEditingTransaction(transaction);
+        setIsEditModalOpen(true);
+    };
+
+    const handleSave = async (updates: Partial<AnyTransaction>) => {
+        if (!editingTransaction) return;
+
+        try {
+            const updatedTransaction = await updateTransaction(editingTransaction.id, updates);
+            setTransactions(transactions.map(t => t.id === editingTransaction.id ? updatedTransaction : t));
+            setIsEditModalOpen(false);
+            setEditingTransaction(null);
+        } catch (error) {
+            alert('Error updating transaction');
+        }
+    };
+
     const handleDownloadTemplate = () => {
         const headers = ['date', 'type', 'category', 'method', 'amount', 'currency', 'source_or_vendor', 'notes'];
         downloadCSV(headers, [], 'transaction-upload-template.csv');
     };
 
-    const handleFileUpload = (file: File) => {
+    const handleFileUpload = async (file: File) => {
         if (!file || !file.type.includes('csv')) {
             alert('Please upload a valid CSV file.');
             return;
@@ -149,36 +174,28 @@ const DataManagement: React.FC = () => {
         reader.onload = async (e) => {
             const text = e.target?.result;
             if (typeof text !== 'string') return;
-    
             try {
                 const lines = text.split('\n').filter(line => line.trim() !== '');
                 const headerLine = lines.shift()?.trim();
                 if (!headerLine) throw new Error("CSV is empty or has no header.");
-    
                 const headers = headerLine.split(',').map(h => h.trim());
                 const expectedHeaders = ['date', 'type', 'category', 'method', 'amount', 'currency', 'source_or_vendor', 'notes'];
-                
                 if (headers.length !== expectedHeaders.length || !headers.every((h, i) => h === expectedHeaders[i])) {
-                     throw new Error(`Invalid CSV headers. Expected: ${expectedHeaders.join(', ')}`);
+                    throw new Error(`Invalid CSV headers. Expected: ${expectedHeaders.join(', ')}`);
                 }
-    
                 const newTransactions: Omit<AnyTransaction, 'id'>[] = lines.map((line, index) => {
                     const values = line.split(',');
                     const row: { [key: string]: string } = headers.reduce((obj, nextKey, index) => {
                         obj[nextKey] = values[index]?.trim();
                         return obj;
                     }, {});
-    
                     if (!row.date || !row.type || !row.amount) throw new Error(`Missing required data on row ${index + 2}.`);
-                    
                     const amount = parseFloat(row.amount);
                     if (isNaN(amount)) throw new Error(`Invalid amount on row ${index + 2}.`);
-                    
                     const type = row.type.toLowerCase() as TransactionType;
                     if (type !== TransactionType.INCOME && type !== TransactionType.EXPENSE) {
                         throw new Error(`Invalid transaction type on row ${index + 2}. Must be 'income' or 'expense'.`);
                     }
-    
                     const commonData = {
                         date: new Date(row.date).toISOString(),
                         amount: amount,
@@ -190,25 +207,19 @@ const DataManagement: React.FC = () => {
                         createdAt: new Date().toISOString(),
                         updatedAt: new Date().toISOString(),
                     };
-    
                     if (type === TransactionType.INCOME) {
                         return { ...commonData, type: TransactionType.INCOME, source: row.source_or_vendor } as Omit<Income, 'id'>;
                     } else {
                         return { ...commonData, type: TransactionType.EXPENSE, vendor: row.source_or_vendor } as Omit<Expense, 'id'>;
                     }
                 });
-    
-                                for (const tx of newTransactions) {
-                                    await addTransaction(tx);
-                                }
-                                alert(`${newTransactions.length} transactions uploaded successfully!`);
-    
+                await addTransactions(newTransactions);
+                alert(`${newTransactions.length} transactions uploaded successfully!`);
             } catch (error) {
                 console.error("CSV parsing error:", error);
                 alert(`Error uploading file: ${error instanceof Error ? error.message : 'An unknown error occurred'}`);
             }
         };
-    
         reader.readAsText(file);
     };
 
@@ -362,57 +373,34 @@ const DataManagement: React.FC = () => {
                                 <th scope="col" className="px-6 py-3">Account</th>
                                 <th scope="col" className="px-6 py-3 text-right">Amount</th>
                                 <th scope="col" className="px-6 py-3">Notes</th>
+                                <th scope="col" className="px-6 py-3">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filteredTransactions.map(t => (
-                                editingTransaction && editingTransaction.id === t.id ? (
-                                    <tr key={t.id} className="border-b border-[#2D2D3A] bg-[#1a1a2a]">
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <input type="date" name="date" value={editFormData.date?.split('T')[0] || ''} onChange={handleEditFormChange} className={filterInputClasses} />
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <select name="type" value={editFormData.type} onChange={handleEditFormChange} className={filterInputClasses}>
-                                                <option value={TransactionType.INCOME}>Income</option>
-                                                <option value={TransactionType.EXPENSE}>Expense</option>
-                                            </select>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <input type="text" name="category" value={editFormData.category} onChange={handleEditFormChange} className={filterInputClasses} />
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <input type="text" name="method" value={editFormData.method} onChange={handleEditFormChange} className={filterInputClasses} />
-                                        </td>
-                                        <td className="px-6 py-4 text-right font-medium text-white">
-                                            <input type="number" name="amount" value={editFormData.amount} onChange={handleEditFormChange} className={filterInputClasses} />
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <textarea name="notes" value={editFormData.notes || ''} onChange={handleEditFormChange} className={filterInputClasses} rows={1}></textarea>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <Button variant="primary" size="sm" onClick={handleEditFormSubmit}>Save</Button>
-                                            <Button variant="secondary" size="sm" onClick={handleEditCancel} className="ml-2">Cancel</Button>
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    <tr key={t.id} className="border-b border-[#2D2D3A] hover:bg-[#0D0D12]">
-                                        <td className="px-6 py-4 whitespace-nowrap">{formatDate(t.date)}</td>
-                                        <td className="px-6 py-4">
-                                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${t.type === TransactionType.INCOME ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                                                {t.type}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">{t.category}</td>
-                                        <td className="px-6 py-4">{t.method}</td>
-                                        <td className="px-6 py-4 text-right font-medium text-white">{formatCurrencyPHP(t.amount)}</td>
-                                        <td className="px-6 py-4">{t.notes || '—'}</td>
-                                        <td className="px-6 py-4">
-                                            <Button variant="primary" size="sm" onClick={() => handleEditClick(t)}>Edit</Button>
-                                            <Button variant="danger" size="sm" onClick={() => handleDeleteTransaction(t.id)} className="ml-2">Delete</Button>
-                                        </td>
-                                    </tr>
-                                )
-                            ))}
+                                <tr key={t.id} className="border-b border-[#2D2D3A] hover:bg-[#0D0D12]">
+                                    <td className="px-6 py-4 whitespace-nowrap">{formatDate(t.date)}</td>
+                                    <td className="px-6 py-4">
+                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${t.type === TransactionType.INCOME ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                                            {t.type}
+                                        </span>
+                                    </td>
+                                    <td className="px-6 py-4">{t.category}</td>
+                                    <td className="px-6 py-4">{t.method}</td>
+                                    <td className="px-6 py-4 text-right font-medium text-white">{formatCurrencyPHP(t.amount)}</td>
+                                    <td className="px-6 py-4">{t.notes || '—'}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap">
+                                        <div className="flex items-center space-x-2">
+                                            <Button variant="ghost" size="sm" onClick={() => handleEdit(t)}>
+                                                <PencilIcon className="h-4 w-4" />
+                                            </Button>
+                                            <Button variant="ghost" size="sm" onClick={() => handleDelete(t.id)}>
+                                                <TrashIcon className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                ))}
                         </tbody>
                     </table>
                  </div>
@@ -420,21 +408,14 @@ const DataManagement: React.FC = () => {
                  {!isLoading && filteredTransactions.length === 0 && <div className="text-center p-4">No transactions found.</div>}
             </Card>
 
-
-            {/* Danger Zone: Reset All Data */}
-            <Card className="mt-8 border-2 border-red-600 bg-red-900/10">
-                <div className="flex flex-col items-start p-6">
-                    <h2 className="text-xl font-bold text-red-600 mb-2">Danger Zone</h2>
-                    <p className="text-red-400 mb-4">This will permanently delete <b>all</b> transaction data. This action cannot be undone.</p>
-                    <Button variant="danger" onClick={() => {
-                        if (window.confirm('Are you sure you want to delete ALL transaction data? This cannot be undone.')) {
-                            resetTransactions();
-                        }
-                    }}>Reset All Data</Button>
-                </div>
-            </Card>
+            <EditTransactionModal
+                isOpen={isEditModalOpen}
+                onClose={() => setIsEditModalOpen(false)}
+                onSave={handleSave}
+                transaction={editingTransaction}
+            />
         </div>
     );
-};
+}
 
 export default DataManagement;
