@@ -2,7 +2,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import Card from './Card';
 import Button from './Button';
-import { getTransactions } from '../../services/mockApi';
+import { listenTransactions } from '../../services/firestoreTransactions';
 import { AnyTransaction, TransactionType, Income, Expense } from '../../types';
 import { formatCurrencyPHP, formatDate, downloadCSV } from '../../utils/formatters';
 import { DocumentArrowDownIcon } from '../Icons';
@@ -21,13 +21,12 @@ const Transactions: React.FC = () => {
     const [selectedMethod, setSelectedMethod] = useState('all');
 
     useEffect(() => {
-        const fetchData = async () => {
-            setIsLoading(true);
-            const data = await getTransactions();
+        setIsLoading(true);
+        const unsubscribe = listenTransactions((data) => {
             setTransactions(data);
             setIsLoading(false);
-        };
-        fetchData();
+        });
+        return () => unsubscribe();
     }, []);
     
     const { categories, methods } = useMemo(() => {
@@ -43,8 +42,10 @@ const Transactions: React.FC = () => {
         };
     }, [transactions]);
 
+    const [dateSortOrder, setDateSortOrder] = useState<'desc' | 'asc'>('desc'); // desc = most recent first
+
     const filteredTransactions = useMemo(() => {
-        return transactions
+        let result = transactions
             .filter(t => activeFilter === 'all' || t.type === activeFilter)
             .filter(t => {
                 if (dateRange.start && new Date(t.date) < new Date(dateRange.start)) return false;
@@ -62,7 +63,14 @@ const Transactions: React.FC = () => {
                     String(val).toLowerCase().includes(searchTerm.toLowerCase())
                 )
             );
-    }, [transactions, searchTerm, activeFilter, dateRange, selectedCategory, selectedMethod]);
+        // Sort by date
+        result = result.slice().sort((a, b) => {
+            const dateA = new Date(a.date).getTime();
+            const dateB = new Date(b.date).getTime();
+            return dateSortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+        });
+        return result;
+    }, [transactions, searchTerm, activeFilter, dateRange, selectedCategory, selectedMethod, dateSortOrder]);
     
     const resetFilters = () => {
         setSearchTerm('');
@@ -158,7 +166,18 @@ const Transactions: React.FC = () => {
                     <table className="w-full text-sm text-left text-gray-400">
                         <thead className="text-xs text-gray-300 uppercase bg-[#0D0D12]">
                             <tr>
-                                <th scope="col" className="px-6 py-3">Date</th>
+                                                                <th scope="col" className="px-6 py-3 cursor-pointer select-none" onClick={() => setDateSortOrder(order => order === 'desc' ? 'asc' : 'desc')}>
+                                                                    <span className="flex items-center gap-1">
+                                                                        Date
+                                                                        <svg className="w-3 h-3 inline-block" viewBox="0 0 20 20" fill="currentColor">
+                                                                            {dateSortOrder === 'desc' ? (
+                                                                                <path d="M10 14l-5-5h10l-5 5z" />
+                                                                            ) : (
+                                                                                <path d="M10 6l5 5H5l5-5z" />
+                                                                            )}
+                                                                        </svg>
+                                                                    </span>
+                                                                </th>
                                 <th scope="col" className="px-6 py-3">Type</th>
                                 <th scope="col" className="px-6 py-3">Source / Vendor</th>
                                 <th scope="col" className="px-6 py-3">Category</th>

@@ -4,9 +4,7 @@ import React, {
     useEffect,
     useMemo
 } from 'react';
-import {
-    getTransactions
-} from '../services/mockApi';
+import { listenTransactions } from '../services/firestoreTransactions';
 import {
     AnyTransaction,
     TransactionType,
@@ -80,13 +78,12 @@ const Reports: React.FC = () => {
 
 
     useEffect(() => {
-        const fetchData = async () => {
-            setIsLoading(true);
-            const transData = await getTransactions();
-            setTransactions(transData);
+        setIsLoading(true);
+        const unsubscribe = listenTransactions((data) => {
+            setTransactions(data);
             setIsLoading(false);
-        };
-        fetchData();
+        });
+        return () => unsubscribe();
     }, []);
 
     const {
@@ -172,15 +169,15 @@ const Reports: React.FC = () => {
                 return acc;
             }, {} as Record <string, number> );
 
-        const totalIncome = Object.values(incomeByCategory).reduce((sum, amount) => sum + amount, 0);
-        const totalExpenses = Object.values(expenseByCategory).reduce((sum, amount) => sum + amount, 0);
+    const totalIncome = Object.values(incomeByCategory).reduce((sum: number, amount) => sum + Number(amount), 0);
+    const totalExpenses = Object.values(expenseByCategory).reduce((sum: number, amount) => sum + Number(amount), 0);
 
         return {
-            incomeItems: Object.entries(incomeByCategory).sort(([, a], [, b]) => b - a),
-            expenseItems: Object.entries(expenseByCategory).sort(([, a], [, b]) => b - a),
+            incomeItems: Object.entries(incomeByCategory).sort(([, a], [, b]) => Number(b) - Number(a)),
+            expenseItems: Object.entries(expenseByCategory).sort(([, a], [, b]) => Number(b) - Number(a)),
             totalIncome,
             totalExpenses,
-            netProfit: totalIncome - totalExpenses,
+            netProfit: Number(totalIncome) - Number(totalExpenses),
         };
     }, [currentPeriod]);
 

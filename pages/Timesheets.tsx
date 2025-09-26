@@ -5,6 +5,7 @@ import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import { getTimesheetEntries, getEmployees, addTimesheetEntry, updateTimesheetEntry, deleteTimesheetEntry } from '../services/mockApi';
+import { downloadCSV } from '../utils/formatters';
 import { TimesheetEntry, Employee, TimesheetStatus } from '../types';
 import { formatDate } from '../utils/formatters';
 import { PlusIcon, EllipsisVerticalIcon, PencilIcon, TrashIcon, CheckCircleIcon, ExclamationCircleIcon, TimesheetsIcon } from '../components/Icons';
@@ -233,6 +234,26 @@ const Timesheets: React.FC = () => {
 
     const filterInputClasses = "bg-[#0D0D12] border border-[#2D2D3A] rounded-lg px-3 py-1.5 text-sm w-full focus:ring-1 focus:ring-[#8A5CF6] focus:border-[#8A5CF6] outline-none";
 
+    // Bulk download and template handlers
+    const handleDownloadTemplate = () => {
+        const headers = ['employeeId', 'date', 'startTime', 'endTime', 'breakDuration', 'notes'];
+        downloadCSV(headers, [], 'timesheet-upload-template.csv');
+    };
+    const handleDownloadAll = () => {
+        const headers = ['employee', 'date', 'startTime', 'endTime', 'breakDuration', 'totalHours', 'notes', 'status'];
+        const data = entries.map(e => [
+            employeeMap.get(e.employeeId) || e.employeeId,
+            e.date,
+            e.startTime,
+            e.endTime,
+            e.breakDuration,
+            e.totalHours,
+            e.notes || '',
+            e.status
+        ]);
+        downloadCSV(headers, data, 'timesheet-backup.csv');
+    };
+
     return (
         <div className="space-y-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -240,7 +261,11 @@ const Timesheets: React.FC = () => {
                     <h1 className="text-3xl font-bold text-white">Timesheets</h1>
                     <p className="text-gray-400 mt-1">Log and manage employee work hours.</p>
                 </div>
-                <Button variant="primary" leftIcon={<PlusIcon/>} onClick={() => { setEditingEntry(null); setIsModalOpen(true); }}>Log Time</Button>
+                <div className="flex gap-2">
+                  <Button variant="secondary" onClick={handleDownloadTemplate}>Download Template</Button>
+                  <Button variant="secondary" onClick={handleDownloadAll}>Download All Timesheets</Button>
+                  <Button variant="primary" leftIcon={<PlusIcon/>} onClick={() => { setEditingEntry(null); setIsModalOpen(true); }}>Log Time</Button>
+                </div>
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

@@ -3,13 +3,21 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
-import { getTransactions, addTransactions } from '../services/mockApi';
+import {
+    listenTransactions,
+    addTransaction,
+    updateTransaction,
+    deleteTransaction,
+    resetTransactions
+} from '../services/firestoreTransactions';
 import { AnyTransaction, TransactionType, Income, Expense } from '../types';
 import { formatCurrencyPHP, formatDate, downloadCSV } from '../utils/formatters';
 import { DocumentArrowDownIcon } from '../components/Icons';
 
 const DataManagement: React.FC = () => {
     const [transactions, setTransactions] = useState<AnyTransaction[]>([]);
+    const [editingTransaction, setEditingTransaction] = useState<AnyTransaction | null>(null);
+    const [editFormData, setEditFormData] = useState<any>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [isDragOver, setIsDragOver] = useState(false);
@@ -22,14 +30,42 @@ const DataManagement: React.FC = () => {
     const [selectedMethod, setSelectedMethod] = useState('all');
 
     useEffect(() => {
-        const fetchData = async () => {
-            setIsLoading(true);
-            const data = await getTransactions();
+        setIsLoading(true);
+        const unsubscribe = listenTransactions((data) => {
             setTransactions(data);
             setIsLoading(false);
-        };
-        fetchData();
+        });
+        return () => unsubscribe();
     }, []);
+
+    // Delete transaction handler
+    const handleDeleteTransaction = async (id: string) => {
+    await deleteTransaction(id);
+    };
+
+    // Edit transaction handlers
+    const handleEditClick = (transaction: AnyTransaction) => {
+        setEditingTransaction(transaction);
+        setEditFormData({ ...transaction });
+    };
+
+    const handleEditFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+        const { name, value } = e.target;
+        setEditFormData((prev: any) => ({ ...prev, [name]: value }));
+    };
+
+    const handleEditFormSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingTransaction) return;
+    await updateTransaction(editingTransaction.id, editFormData);
+    setEditingTransaction(null);
+    setEditFormData(null);
+    };
+
+    const handleEditCancel = () => {
+        setEditingTransaction(null);
+        setEditFormData(null);
+    };
 
     const { categories, methods } = useMemo(() => {
         const categoriesSet = new Set<string>();
@@ -162,9 +198,10 @@ const DataManagement: React.FC = () => {
                     }
                 });
     
-                const added = await addTransactions(newTransactions);
-                setTransactions(prev => [...added, ...prev]);
-                alert(`${newTransactions.length} transactions uploaded successfully!`);
+                                for (const tx of newTransactions) {
+                                    await addTransaction(tx);
+                                }
+                                alert(`${newTransactions.length} transactions uploaded successfully!`);
     
             } catch (error) {
                 console.error("CSV parsing error:", error);
@@ -329,18 +366,52 @@ const DataManagement: React.FC = () => {
                         </thead>
                         <tbody>
                             {filteredTransactions.map(t => (
-                                <tr key={t.id} className="border-b border-[#2D2D3A] hover:bg-[#0D0D12]">
-                                    <td className="px-6 py-4 whitespace-nowrap">{formatDate(t.date)}</td>
-                                    <td className="px-6 py-4">
-                                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${t.type === TransactionType.INCOME ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                                            {t.type}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4">{t.category}</td>
-                                    <td className="px-6 py-4">{t.method}</td>
-                                    <td className="px-6 py-4 text-right font-medium text-white">{formatCurrencyPHP(t.amount)}</td>
-                                    <td className="px-6 py-4">{t.notes || '—'}</td>
-                                </tr>
+                                editingTransaction && editingTransaction.id === t.id ? (
+                                    <tr key={t.id} className="border-b border-[#2D2D3A] bg-[#1a1a2a]">
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <input type="date" name="date" value={editFormData.date?.split('T')[0] || ''} onChange={handleEditFormChange} className={filterInputClasses} />
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <select name="type" value={editFormData.type} onChange={handleEditFormChange} className={filterInputClasses}>
+                                                <option value={TransactionType.INCOME}>Income</option>
+                                                <option value={TransactionType.EXPENSE}>Expense</option>
+                                            </select>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <input type="text" name="category" value={editFormData.category} onChange={handleEditFormChange} className={filterInputClasses} />
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <input type="text" name="method" value={editFormData.method} onChange={handleEditFormChange} className={filterInputClasses} />
+                                        </td>
+                                        <td className="px-6 py-4 text-right font-medium text-white">
+                                            <input type="number" name="amount" value={editFormData.amount} onChange={handleEditFormChange} className={filterInputClasses} />
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <textarea name="notes" value={editFormData.notes || ''} onChange={handleEditFormChange} className={filterInputClasses} rows={1}></textarea>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <Button variant="primary" size="sm" onClick={handleEditFormSubmit}>Save</Button>
+                                            <Button variant="secondary" size="sm" onClick={handleEditCancel} className="ml-2">Cancel</Button>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    <tr key={t.id} className="border-b border-[#2D2D3A] hover:bg-[#0D0D12]">
+                                        <td className="px-6 py-4 whitespace-nowrap">{formatDate(t.date)}</td>
+                                        <td className="px-6 py-4">
+                                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${t.type === TransactionType.INCOME ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                                                {t.type}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4">{t.category}</td>
+                                        <td className="px-6 py-4">{t.method}</td>
+                                        <td className="px-6 py-4 text-right font-medium text-white">{formatCurrencyPHP(t.amount)}</td>
+                                        <td className="px-6 py-4">{t.notes || '—'}</td>
+                                        <td className="px-6 py-4">
+                                            <Button variant="primary" size="sm" onClick={() => handleEditClick(t)}>Edit</Button>
+                                            <Button variant="danger" size="sm" onClick={() => handleDeleteTransaction(t.id)} className="ml-2">Delete</Button>
+                                        </td>
+                                    </tr>
+                                )
                             ))}
                         </tbody>
                     </table>
@@ -349,6 +420,19 @@ const DataManagement: React.FC = () => {
                  {!isLoading && filteredTransactions.length === 0 && <div className="text-center p-4">No transactions found.</div>}
             </Card>
 
+
+            {/* Danger Zone: Reset All Data */}
+            <Card className="mt-8 border-2 border-red-600 bg-red-900/10">
+                <div className="flex flex-col items-start p-6">
+                    <h2 className="text-xl font-bold text-red-600 mb-2">Danger Zone</h2>
+                    <p className="text-red-400 mb-4">This will permanently delete <b>all</b> transaction data. This action cannot be undone.</p>
+                    <Button variant="danger" onClick={() => {
+                        if (window.confirm('Are you sure you want to delete ALL transaction data? This cannot be undone.')) {
+                            resetTransactions();
+                        }
+                    }}>Reset All Data</Button>
+                </div>
+            </Card>
         </div>
     );
 };

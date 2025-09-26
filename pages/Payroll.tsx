@@ -64,7 +64,7 @@ const RunPayrollForm: React.FC<{
             return;
         }
 
-        const employeeMap = new Map(employees.map(emp => [emp.id, emp]));
+    const employeeMap: Map<string, Employee> = new Map(employees.map(emp => [emp.id, emp]));
         const newEntries: Omit<PayrollEntry, 'id' | 'status'>[] = Object.entries(payrollData)
             // Fix: Explicitly type the destructured parameters to resolve 'unknown' type errors.
             .map(([employeeId, data]: [string, EmployeePayrollData]) => {
@@ -253,12 +253,41 @@ const Payroll: React.FC = () => {
         }
     };
 
+    // Download template for upload
+    const handleDownloadTemplate = () => {
+        const headers = ['employeeId', 'periodStart', 'periodEnd', 'grossPay', 'sss', 'philhealth', 'pagibig', 'tax', 'netPay'];
+        downloadCSV(headers, [], 'payroll-upload-template.csv');
+    };
+    // Download all payroll data for backup
+    const handleDownloadAll = async () => {
+        setIsLoading(true);
+        await fetchData(); // Ensure latest data
+        const headers = ['Employee', 'EmployeeId', 'Position', 'Period Start', 'Period End', 'Gross Pay', 'SSS', 'PhilHealth', 'Pag-IBIG', 'Tax', 'Net Pay', 'Status'];
+        const rows = payrollEntries.map(item => {
+            const emp = employees.find(e => e.id === item.employeeId);
+            return [
+                emp?.name || 'N/A',
+                item.employeeId,
+                emp?.position || 'N/A',
+                item.periodStart,
+                item.periodEnd,
+                item.grossPay,
+                item.deductions.sss,
+                item.deductions.philhealth,
+                item.deductions.pagibig,
+                item.deductions.tax,
+                item.netPay,
+                item.status
+            ];
+        });
+        downloadCSV(headers, rows, 'payroll-backup.csv');
+        setIsLoading(false);
+    };
     const handleExportCSV = () => {
         if (filteredData.length === 0) {
             alert("No data to export.");
             return;
         }
-
         const headers = ['Employee', 'Position', 'Gross Pay', 'SSS', 'PhilHealth', 'Pag-IBIG', 'Tax', 'Total Deductions', 'Net Pay', 'Status'];
         const rows = filteredData.map(item => {
             const totalDeductions = item.grossPay - item.netPay;
@@ -275,7 +304,6 @@ const Payroll: React.FC = () => {
                 item.status
             ];
         });
-
         const periodLabel = (dateRange.start || dateRange.end) ? `${dateRange.start}_to_${dateRange.end}` : 'all-periods';
         downloadCSV(headers, rows, `payroll-export-${periodLabel}.csv`);
     };
@@ -290,6 +318,8 @@ const Payroll: React.FC = () => {
                     <p className="text-gray-400 mt-1">Process, review, and manage employee payroll.</p>
                 </div>
                 <div className="flex space-x-2">
+                    <Button variant="secondary" onClick={handleDownloadTemplate}>Download Template</Button>
+                    <Button variant="secondary" onClick={handleDownloadAll}>Download All Payroll</Button>
                     <Button variant="secondary" leftIcon={<DocumentArrowDownIcon/>} onClick={handleExportCSV}>Export CSV</Button>
                     <Button variant="primary" leftIcon={<PlusIcon/>} onClick={() => setIsRunPayrollModalOpen(true)}>Run New Payroll</Button>
                 </div>

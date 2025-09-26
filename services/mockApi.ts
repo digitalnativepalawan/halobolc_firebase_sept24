@@ -13,12 +13,7 @@ let mockTransactions: AnyTransaction[] = [];
 
 let mockTasks: Task[] = [];
 
-let mockEmployees: Employee[] = [
-  { id: 'emp1', name: 'John Doe', position: 'Resort Manager', rate: 300, deductions: { sss: 1125, philhealth: 437.5, pagibig: 100, tax: 2479.17 }, hireDate: getDate(365) },
-  { id: 'emp2', name: 'Jane Smith', position: 'Front Desk Officer', rate: 150, deductions: { sss: 562.5, philhealth: 218.75, pagibig: 100, tax: 0 }, hireDate: getDate(180) },
-  { id: 'emp3', name: 'Peter Jones', position: 'Maintenance Staff', rate: 120, deductions: { sss: 450, philhealth: 175, pagibig: 100, tax: 0 }, hireDate: getDate(90) },
-  { id: 'emp4', name: 'Mary Williams', position: 'Housekeeping Supervisor', rate: 130, deductions: { sss: 495, philhealth: 192.5, pagibig: 100, tax: 0 }, hireDate: getDate(600) },
-];
+let mockEmployees: Employee[] = [];
 
 let mockPayrollEntries: PayrollEntry[] = [];
 
@@ -30,14 +25,7 @@ let mockProducts: Product[] = [];
 
 let mockInvoices: Invoice[] = [];
 
-let mockTimesheetEntries: TimesheetEntry[] = [
-    { id: 'ts1', employeeId: 'emp1', date: getDate(1), startTime: '09:00', endTime: '17:30', breakDuration: 60, totalHours: 7.5, status: TimesheetStatus.APPROVED, approvedBy: 'admin', approvedAt: getDate(0), createdAt: getDate(1), updatedAt: getDate(0) },
-    { id: 'ts2', employeeId: 'emp2', date: getDate(1), startTime: '08:30', endTime: '17:00', breakDuration: 30, totalHours: 8, status: TimesheetStatus.APPROVED, approvedBy: 'admin', approvedAt: getDate(0), createdAt: getDate(1), updatedAt: getDate(0) },
-    { id: 'ts3', employeeId: 'emp3', date: getDate(1), startTime: '10:00', endTime: '19:00', breakDuration: 60, totalHours: 8, status: TimesheetStatus.PENDING, createdAt: getDate(1), updatedAt: getDate(1) },
-    { id: 'ts4', employeeId: 'emp4', date: getDate(2), startTime: '09:00', endTime: '18:00', breakDuration: 60, totalHours: 8, status: TimesheetStatus.PENDING, createdAt: getDate(2), updatedAt: getDate(2) },
-    { id: 'ts5', employeeId: 'emp1', date: getDate(2), startTime: '09:00', endTime: '19:00', breakDuration: 60, totalHours: 9, notes: 'Stayed late to finish report', status: TimesheetStatus.PENDING, createdAt: getDate(2), updatedAt: getDate(2) },
-    { id: 'ts6', employeeId: 'emp2', date: getDate(3), startTime: '08:00', endTime: '12:00', breakDuration: 0, totalHours: 4, notes: 'Half day', status: TimesheetStatus.REJECTED, approvedBy: 'admin', approvedAt: getDate(2), createdAt: getDate(3), updatedAt: getDate(2) },
-];
+let mockTimesheetEntries: TimesheetEntry[] = [];
 
 const apiRequest = <T,>(data: T, delay = 500): Promise<T> => 
   new Promise(resolve => setTimeout(() => resolve(data), delay));

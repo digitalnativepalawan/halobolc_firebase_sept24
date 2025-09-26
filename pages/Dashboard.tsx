@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { getTransactions, getTasks } from '../services/mockApi';
+import { listenTransactions } from '../services/firestoreTransactions';
+import { getTasks } from '../services/mockApi';
 import { AnyTransaction, Task, TransactionType, TaskStatus, Income } from '../types';
 import Card from '../components/ui/Card';
 import KpiCard from '../components/ui/KpiCard';
@@ -26,19 +27,14 @@ const Dashboard: React.FC = () => {
 
 
     useEffect(() => {
-        const fetchData = async () => {
-            setIsLoading(true);
-            try {
-                const [transData, taskData] = await Promise.all([getTransactions(), getTasks()]);
-                setTransactions(transData);
-                setTasks(taskData);
-            } catch (error) {
-                console.error("Failed to fetch dashboard data:", error);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchData();
+        setIsLoading(true);
+        const unsubscribe = listenTransactions((data) => {
+            setTransactions(data);
+            setIsLoading(false);
+        });
+        // Fetch tasks as before
+        getTasks().then(setTasks);
+        return () => unsubscribe();
     }, []);
     
     const { filteredTransactions, previousPeriodTransactions } = useMemo(() => {

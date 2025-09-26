@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { downloadCSV } from '../utils/formatters';
 import { Customer, Product, Invoice, InvoiceStatus, LineItem } from '../types';
 import { getCustomers, getProducts, addCustomer, getInvoices, addInvoice } from '../services/mockApi';
 import { formatCurrencyPHP, formatDate } from '../utils/formatters';
@@ -279,16 +280,16 @@ const Invoices: React.FC = () => {
         const pageHeight = doc.internal.pageSize.getHeight();
         let yPos = margin;
 
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor('#000000');
 
-        doc.setFontSize(22);
-        doc.text('HaloBloc Inc.', margin, yPos);
-        
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        doc.text('Boutique Resorts & Modular Homes', margin, yPos + 0.25);
-        doc.text('El Nido, Palawan, Philippines', margin, yPos + 0.4);
+    // Use Futura font if available, fallback to helvetica
+    try { doc.setFont('Futura', 'bold'); } catch { doc.setFont('helvetica', 'bold'); }
+    doc.setTextColor('#000000');
+    doc.setFontSize(22);
+    doc.text('HaloBloc', margin, yPos);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text('Lumambong Beach, Palawan Island 5309', margin, yPos + 0.25);
 
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(26);
@@ -463,6 +464,40 @@ const Invoices: React.FC = () => {
     const labelClasses = "text-xs text-gray-400 mb-1 block font-medium";
     const tableHeaderButtonClasses = "font-semibold text-white print-text-black flex items-center gap-1";
 
+    // Download Template for Invoices
+    const handleDownloadTemplate = () => {
+        const headers = [
+            'invoiceNumber', 'customerId', 'invoiceDate', 'dueDate', 'taxRate', 'discount', 'notes', 'status',
+            'lineItems[0].name', 'lineItems[0].quantity', 'lineItems[0].unitPrice'
+        ];
+        downloadCSV(headers, [], 'invoice-upload-template.csv');
+    };
+
+    // Download all invoices as CSV
+    const handleDownloadAll = () => {
+        const headers = [
+            'invoiceNumber', 'customerName', 'invoiceDate', 'dueDate', 'taxRate', 'discount', 'subtotal', 'taxAmount', 'total', 'notes', 'status',
+            'lineItems'
+        ];
+        const data = processedInvoices.map(inv => [
+            inv.invoiceNumber,
+            inv.customerName,
+            inv.invoiceDate,
+            inv.dueDate,
+            inv.taxRate,
+            inv.discount,
+            inv.subtotal,
+            inv.taxAmount,
+            inv.total,
+            inv.notes,
+            inv.status,
+            inv.lineItems && inv.lineItems.length > 0
+                ? inv.lineItems.map(li => `${li.name} (qty: ${li.quantity}, unit: ${li.unitPrice})`).join('; ')
+                : ''
+        ]);
+        downloadCSV(headers, data, 'invoices-backup.csv');
+    };
+
     return (
         <div className="space-y-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 no-print">
@@ -471,6 +506,8 @@ const Invoices: React.FC = () => {
                     <p className="text-gray-400 mt-1">Create and manage professional invoices.</p>
                 </div>
                 <div className="flex space-x-2 flex-wrap">
+                    <Button variant="secondary" onClick={handleDownloadTemplate}>Download Template</Button>
+                    <Button variant="secondary" onClick={handleDownloadAll}>Download All Invoices</Button>
                     <Button variant="subtle" leftIcon={<ArrowUturnLeftIcon />} onClick={handleReset}>Reset</Button>
                     <Button variant="secondary" onClick={handleSaveInvoice} disabled={isSaving || !selectedCustomerId || lineItems.length === 0}>
                         {isSaving ? 'Saving...' : 'Save Invoice'}
@@ -538,9 +575,8 @@ const Invoices: React.FC = () => {
                         <div className="print-bg-white print-text-black">
                              <header className="flex justify-between items-start pb-6 border-b print-border-gray border-[#2D2D3A]">
                                 <div>
-                                    <h1 className="text-3xl font-bold print-text-black text-white">HaloBloc Inc.</h1>
-                                    <p className="text-sm text-gray-400 print-text-black">Boutique Resorts & Modular Homes</p>
-                                    <p className="text-sm text-gray-400 print-text-black">El Nido, Palawan, Philippines</p>
+                                    <h1 className="text-3xl font-bold print-text-black text-white" style={{ fontFamily: 'Futura, Helvetica, Arial, sans-serif' }}>HaloBloc</h1>
+                                    <p className="text-sm text-gray-400 print-text-black">Lumambong Beach, Palawan Island 5309</p>
                                 </div>
                                 <div className="text-right">
                                     <h2 className="text-3xl font-semibold text-gray-400 print-text-black uppercase tracking-widest">Invoice</h2>

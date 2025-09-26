@@ -19,7 +19,6 @@ const navItems = [
   { to: '/payroll', icon: PayrollIcon, label: 'Payroll' },
   { to: '/invoices', icon: InvoiceIcon, label: 'Invoices' },
   { to: '/employees', icon: EmployeesIcon, label: 'Employees' },
-  { to: '/tasks', icon: TasksIcon, label: 'Tasks' },
   { to: '/vendors', icon: VendorsIcon, label: 'Vendors' },
   { to: '/reports', icon: ReportsIcon, label: 'Reports' },
 ];
@@ -110,6 +109,22 @@ const Sidebar: React.FC<SidebarProps> = ({ sidebarOpen, setSidebarOpen }) => {
                 {item.label}
               </NavLink>
             ))}
+            {/* OTR Scan external link */}
+            <a
+              href="https://receipt-capture-extract-738243500004.us-west1.run.app/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className={linkClasses + ' ' + inactiveClasses + ' flex items-center mt-2'}
+              style={{ marginLeft: 0 }}
+            >
+              <span className="h-5 w-5 mr-3 inline-block">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6A2.25 2.25 0 005.25 5.25v13.5A2.25 2.25 0 007.5 21h9a2.25 2.25 0 002.25-2.25V12" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M18 15l3-3m0 0l-3-3m3 3H9" />
+                </svg>
+              </span>
+              OTR Scan
+            </a>
           </nav>
         </div>
         <div className="p-4 border-t border-[#1A1A23] space-y-2">

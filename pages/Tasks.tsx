@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import Button from '../components/ui/Button';
+import { downloadCSV } from '../utils/formatters';
 import { getTasks, addTaskComment, addTaskAttachment, addTask, updateTask, deleteTask } from '../services/mockApi';
 import { Task, TaskStatus, TaskPriority } from '../types';
 import { PlusIcon, UserCircleIcon, CalendarIcon, FlagIcon, ClipboardListIcon, CogIcon, ExclamationCircleIcon, CheckCircleIcon, ChatBubbleLeftIcon, PaperClipIcon, PhotoIcon, EllipsisVerticalIcon, PencilIcon, TrashIcon } from '../components/Icons';
@@ -615,6 +616,32 @@ const Tasks: React.FC = () => {
         }
     };
 
+    // Download template for upload
+    const handleDownloadTemplate = () => {
+        const headers = ['title', 'description', 'assignee', 'priority', 'status', 'dueDate'];
+        downloadCSV(headers, [], 'tasks-upload-template.csv');
+    };
+    // Download all tasks for backup
+    const handleDownloadAll = async () => {
+        setIsLoading(true);
+        const data = await getTasks(); // Ensure latest data
+        const headers = ['id', 'title', 'description', 'assignee', 'priority', 'status', 'dueDate', 'attachments', 'comments', 'createdAt', 'updatedAt'];
+        const rows = data.map(t => [
+            t.id,
+            t.title,
+            t.description || '',
+            t.assignee,
+            t.priority,
+            t.status,
+            t.dueDate || '',
+            (t.attachments || []).join(';'),
+            (t.comments || []).map(c => `${c.userId}:${c.text}`).join(';'),
+            t.createdAt || '',
+            t.updatedAt || ''
+        ]);
+        downloadCSV(headers, rows, 'tasks-backup.csv');
+        setIsLoading(false);
+    };
     return (
         <div className="space-y-6 h-[calc(100vh-6rem)] flex flex-col">
             <div className="flex justify-between items-center">
@@ -622,7 +649,11 @@ const Tasks: React.FC = () => {
                     <h1 className="text-3xl font-bold text-white">Tasks Board</h1>
                     <p className="text-gray-400 mt-1">Organize, assign, and track your team's work.</p>
                 </div>
-                <Button variant="primary" leftIcon={<PlusIcon />} onClick={() => setIsNewTaskModalOpen(true)}>New Task</Button>
+                <div className="flex gap-2">
+                  <Button variant="secondary" onClick={handleDownloadTemplate}>Download Template</Button>
+                  <Button variant="secondary" onClick={handleDownloadAll}>Download All Tasks</Button>
+                  <Button variant="primary" leftIcon={<PlusIcon />} onClick={() => setIsNewTaskModalOpen(true)}>New Task</Button>
+                </div>
             </div>
             {isLoading ? (
                 <div className="flex-1 flex items-center justify-center text-gray-400">Loading tasks...</div>
